@@ -39,7 +39,6 @@ void clearLine(int start, int end) {
 
 void movePixels(int start, int end, int size)
 {
-  // Set direction
   int dir = start < end ? 1 : -1;
   // set actual start which is couple steps before given start
   int actualStart = start - size * dir + 1 * dir;
@@ -54,9 +53,9 @@ void movePixels(int start, int end, int size)
     int spaceRemaining = (end - start) * dir + size - c;
     lineSize = spaceRemaining < size ? spaceRemaining : lineSize;
     int lineEnd = lineStart + lineSize * dir - dir;
-    drawLine(lineStart, lineEnd, CRGB::Purple);
+    drawLine(lineStart, lineEnd, CRGB::LimeGreen);
     FastLED.show();
-    delay(200);
+    delay(100);
   }
   // Clear after all of LED's are moved
   clearLine(start, end);
@@ -72,10 +71,7 @@ void setup()
 
 void loop()
 {
-  movePixels(5, 11, 5);
-  movePixels(11, 5, 5);
-  // for (int i = 0; i < ROW_COUNT; i++) {
-  //   lightRowFromTo(ROW_COUNT - i - 1, 6, 0, 1);
-  // }
-  delay(1000);
+  for (int i = 0; i <= ROW_COUNT; i++) {
+    movePixels(i*LEDS_PER_ROW, i*LEDS_PER_ROW + LEDS_PER_ROW, 3);
+  }
 }
