@@ -58,53 +58,69 @@ void lightFromToDesc(int from, int to, int size)
   }
 }
 
-void clear(int from, int to)
-{
-   int direction = from < to ? 1 : -1;
-  for (int i = from * direction; i <= to; i++)
-  {
-    setLedColor(i * direction, CRGB::Black);
-  }
-}
-
-void drawStuff(int start, int end, int size)
+// sets color of pixel line given to given color
+void drawLine(int start, int end, CRGB color)
 {
   Serial.print("Start=");
   Serial.print(start);
   Serial.print("end=");
-  Serial.print(end);
-  Serial.print("size=");
-  Serial.println(size);
-  for (int k = start; k <= end && k < size + start; k++)
+  Serial.println(end);
+  int dir = start < end ? 1 : -1;
+  for (int i = start; i != end + (1 * dir); i = i + (1 * dir))
   {
-    setLedColor(k, CRGB::Blue);
+    setLedColor(i, color);
   }
+}
+
+void clearLine(int start, int end) {
+  drawLine(start, end, CRGB::Black);
+}
+
+void movePixels(int start, int end, int size) {
+  int dir = start < end ? 1 : -1;
+
+  int interpolatedStart = start - size*dir + 1*dir;
+  int interpolatedEnd = end + size*dir - 1*dir;
+
+  int i, c;// c - counter
+  for (i = interpolatedStart, c = 0; i != end + dir; i += dir, c++) {
+    clearLine(start, end);
+    int lineStart = i < start ? start : i;
+    int lineSize = c >= size ? size : (c + 1);
+    if (lineStart + lineSize - 1 > end) {
+      lineSize = interpolatedEnd - lineStart - 1;
+    }
+    drawLine(lineStart, lineStart + lineSize -1, CRGB::Purple);
+    FastLED.show();
+    delay(200);
+  }
+  clearLine(start, end);
   FastLED.show();
 }
 
-void move(int from, int to, int size)
-{
-  int direction = from < to ? 1 : -1;
-  for (int i = from * direction; i <= to + size; i++)
-  {
-    clear(from, to);
-    int start = i - size; //-9
-    int currentSize = size;
-    if (start*direction < 0)
-    {
-      start = 0;
-      currentSize = i;
-    }
-    if (start < i) {
-      start = i; //-6
-      currentSize = from + i + 1;
-    }
-    drawStuff(start * direction, to + start*direction+currentSize-1, currentSize);
-    delay(1000);
-  }
-  clear(from, to);
-  FastLED.show();
-}
+// void move(int from, int to, int size)
+// {
+//   int direction = from < to ? 1 : -1;
+//   for (int i = from * direction; i <= to + size; i++)
+//   {
+//     clear(from, to);
+//     int start = i - size; //-9
+//     int currentSize = size;
+//     if (start*direction < 0)
+//     {
+//       start = 0;
+//       currentSize = i;
+//     }
+//     if (start < i) {
+//       start = i; //-6
+//       currentSize = from + i + 1;
+//     }
+//     drawLine(start * direction, to + start*direction+currentSize-1, currentSize);
+//     delay(1000);
+//   }
+//   clear(from, to);
+//   FastLED.show();
+// }
 
 void lightRowFromTo(int row, int from, int to, int size)
 {
@@ -127,7 +143,8 @@ void setup()
 
 void loop()
 {
-  move(6, 0, 3);
+  movePixels(5, 11, 3);
+  movePixels(11, 5, 3);
   // for (int i = 0; i < ROW_COUNT; i++) {
   //   lightRowFromTo(ROW_COUNT - i - 1, 6, 0, 1);
   // }
