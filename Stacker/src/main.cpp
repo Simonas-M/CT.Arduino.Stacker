@@ -1,21 +1,27 @@
 #include <Arduino.h>
 #include "FastLED.h"
-
-#define NUM_LEDS 60 // LED's in strip
-#define DATA_PIN 5  // LED strip data pin
-#define BUTTON_PIN 8 // Button pin
-
-#define LEDS_PER_ROW 7 // how many LED's per row
-#define INITIAL_SIZE 3 // how many pixels to slide back and forward
-#define INITIAL_SPEED 100;
+#include "../lib/my_defines.h"
+#include "../lib/digital_rain.h"
 
 // Define the array of LED's
-const int ROW_COUNT = NUM_LEDS / LEDS_PER_ROW;
 CRGB leds[NUM_LEDS];
 int buttonState = HIGH;
 int buttonPresses = 0;
 int blockSize = INITIAL_SIZE;
 int speed = INITIAL_SPEED;
+
+// DigitalRain Initialization
+Trail trails[LEDS_PER_ROW];
+
+void clearTrails()
+{
+  Trail noTrail = { .position = NULL, .trail = NULL };
+
+  for (int i = 0; i < LEDS_PER_ROW; i++)
+  {
+    trails[i] = noTrail;
+  }
+}
 
 int getButtonState() {
   return digitalRead(BUTTON_PIN);
@@ -27,15 +33,12 @@ bool isButtonPressed() {
 
 void setLedColor(unsigned int row, unsigned int col, CRGB color)
 {
-  // Serial.print(row);
-  // Serial.println(col);
   buttonState = getButtonState();
   leds[LEDS_PER_ROW * row + col] = color;
 }
 
 void setLedColor(unsigned int ledIndex, CRGB color)
 {
-  // Serial.println(ledIndex);
   buttonState = getButtonState();
   leds[ledIndex] = color;
 }
@@ -46,6 +49,13 @@ void setLedColor(int startIndex, CRGB* colorArray, int arraySize)
   Serial.println(startIndex);
   for(int i = 0; i <= arraySize; i++) {
     leds[startIndex + i] = colorArray[i];
+  }
+}
+
+void setLEDColumn(unsigned int column, unsigned int start, unsigned int end, CRGB* colorArray)
+{
+  for (int j = start, c = 0; j < end; j++, c++) {
+    setLedColor(j, column, colorArray[c]);
   }
 }
 
@@ -60,12 +70,12 @@ void drawLine(int start, int end, CRGB color)
 }
 
 void flash(CRGB color, int times) {
-  FastLED.setBrightness(64);
+  FastLED.setBrightness(4);
   for (int i = 0; i <= times; i++) {
     drawLine(0, NUM_LEDS, color);
     FastLED.show();
     delay(100);
-    drawLine(0, 60, CRGB::Black);
+    drawLine(0, NUM_LEDS, CRGB::Black);
     FastLED.show();
     delay(100);
   }
@@ -138,6 +148,20 @@ void calculateRow(int row) {
   FastLED.show();
 }
 
+void addTrailsToMatrix(Trail trails[])
+{
+  Serial.println("add trails");
+	for (int i = 0; i > LEDS_PER_ROW; i++)
+	{
+		if (trails[i].trail != NULL && trails[i].position > 0)
+		{
+			TrailState state = getTrailNextPosition(trails[i]);
+			CRGB *arraySlice = getArraySlice(trails[i].trail, state.cutStart, state.cutEnd);
+			setLEDColumn(i, state.start, state.end, arraySlice);
+		}
+	}
+}
+
 void setup()
 {
   // Setup a button
@@ -147,41 +171,49 @@ void setup()
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
   FastLED.setBrightness(16);
 
+  clearTrails();
+
   Serial.begin(9600);
 }
 
 void loop()
 {
-  clearLine(0, NUM_LEDS);
-  blockSize = INITIAL_SIZE; // Reset block size
-  buttonState = 1; // Set button state to not pressed
-  speed = INITIAL_SPEED;
-  delay(200);
-  for (int i = 0; i <= ROW_COUNT;) // Game loop
-  {
-    if (getButtonState() == 0) {
-      flash(CRGB::DarkOrange, 4);
-      return;
-    }
-    moveForwardAndBack(i * LEDS_PER_ROW,
-                       i * LEDS_PER_ROW + LEDS_PER_ROW - 1,
-                       blockSize);
-    if (isButtonPressed())
-    {
-      calculateRow(i);
-      i++; // Next row 
-      buttonState = 1; // Set button state to not pressed
-      speed -= 10; // increase speed to harden the difficulty
-      if (blockSize < 1) // Game over?
-      {
-        flash(CRGB::Red, 4);
-        return;
-      }
-      if (i == ROW_COUNT) {
-        flash(CRGB::Green, 4);
-        return;
-      }
-      delay(200);
-    }
-  }
+  // clearLine(0, NUM_LEDS);
+  // blockSize = INITIAL_SIZE; // Reset block size
+  // buttonState = 1; // Set button state to not pressed
+  // speed = INITIAL_SPEED;
+  // delay(200);
+  // for (int i = 0; i <= ROW_COUNT;) // Game loop
+  // {
+  //   if (getButtonState() == 0) {
+  //     flash(CRGB::DarkOrange, 4);
+  //     return;
+  //   }
+  //   moveForwardAndBack(i * LEDS_PER_ROW,
+  //                      i * LEDS_PER_ROW + LEDS_PER_ROW - 1,
+  //                      blockSize);
+  //   if (isButtonPressed())
+  //   {
+  //     calculateRow(i);
+  //     i++; // Next row 
+  //     buttonState = 1; // Set button state to not pressed
+  //     speed -= 10; // increase speed to harden the difficulty
+  //     if (blockSize < 1) // Game over?
+  //     {
+  //       flash(CRGB::Red, 4);
+  //       return;
+  //     }
+  //     if (i == ROW_COUNT) {
+  //       flash(CRGB::Green, 4);
+  //       return;
+  //     }
+  //     delay(200);
+  //   }
+  // }
+  // drawLine(0, NUM_LEDS, CRGB::Blue);
+  advanceTrails(trails);
+  maybeAddNewTrail(trails);
+  addTrailsToMatrix(trails);
+  FastLED.show();
+  delay(1000);
 }
