@@ -44,7 +44,7 @@ void setLedColor(int startIndex, CRGB* colorArray, int arraySize)
 {
   Serial.print("startIndex=");
   Serial.println(startIndex);
-  for(int i = 0; i <= arraySize; i++) {
+  for(int i = 0; i < arraySize; i++) {
     leds[startIndex + i] = colorArray[i];
   }
 }
@@ -144,7 +144,7 @@ void setup()
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
   // Setup LED strip
-  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
+  FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, NUM_LEDS);
   FastLED.setBrightness(16);
 
   Serial.begin(9600);
@@ -157,15 +157,29 @@ void loop()
   buttonState = 1; // Set button state to not pressed
   speed = INITIAL_SPEED;
   delay(200);
+  int level = -99;
+  int start;
+  int end;
   for (int i = 0; i <= ROW_COUNT;) // Game loop
   {
     if (getButtonState() == 0) {
       flash(CRGB::DarkOrange, 4);
       return;
     }
-    moveForwardAndBack(i * LEDS_PER_ROW,
-                       i * LEDS_PER_ROW + LEDS_PER_ROW - 1,
-                       blockSize);
+    
+    if (level != i) {
+      level = i;
+      start = i * LEDS_PER_ROW;
+      end = i * LEDS_PER_ROW + LEDS_PER_ROW - 1;
+      
+      if ((rand() % 100) < 50) {
+        int temp = start;
+        start = end;
+        end = temp;
+      }
+    }
+
+    moveForwardAndBack(start, end, blockSize);
     if (isButtonPressed())
     {
       calculateRow(i);
@@ -184,4 +198,3 @@ void loop()
       delay(200);
     }
   }
-}
