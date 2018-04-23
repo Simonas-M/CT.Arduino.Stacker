@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include "FastLED.h"
 
-#define NUM_LEDS 60 // LED's in strip
-#define DATA_PIN 5  // LED strip data pin
+#define NUM_LEDS 60  // LED's in strip
+#define DATA_PIN 5   // LED strip data pin
 #define BUTTON_PIN 8 // Button pin
 
 #define LEDS_PER_ROW 7 // how many LED's per row
@@ -17,34 +17,32 @@ int buttonPresses = 0;
 int blockSize = INITIAL_SIZE;
 int speed = INITIAL_SPEED;
 
-int getButtonState() {
+int getButtonState()
+{
   return digitalRead(BUTTON_PIN);
 }
 
-bool isButtonPressed() {
+bool isButtonPressed()
+{
   return buttonState == 0;
 }
 
 void setLedColor(unsigned int row, unsigned int col, CRGB color)
 {
-  // Serial.print(row);
-  // Serial.println(col);
   buttonState = getButtonState();
   leds[LEDS_PER_ROW * row + col] = color;
 }
 
 void setLedColor(unsigned int ledIndex, CRGB color)
 {
-  // Serial.println(ledIndex);
   buttonState = getButtonState();
   leds[ledIndex] = color;
 }
 
-void setLedColor(int startIndex, CRGB* colorArray, int arraySize)
+void setLedColor(int startIndex, CRGB *colorArray, int arraySize)
 {
-  Serial.print("startIndex=");
-  Serial.println(startIndex);
-  for(int i = 0; i < arraySize; i++) {
+  for (int i = 0; i < arraySize; i++)
+  {
     leds[startIndex + i] = colorArray[i];
   }
 }
@@ -59,9 +57,11 @@ void drawLine(int start, int end, CRGB color)
   }
 }
 
-void flash(CRGB color, int times) {
+void flash(CRGB color, int times)
+{
   FastLED.setBrightness(64);
-  for (int i = 0; i <= times; i++) {
+  for (int i = 0; i <= times; i++)
+  {
     drawLine(0, NUM_LEDS, color);
     FastLED.show();
     delay(100);
@@ -72,7 +72,8 @@ void flash(CRGB color, int times) {
   FastLED.setBrightness(16);
 }
 
-void clearLine(int start, int end) {
+void clearLine(int start, int end)
+{
   drawLine(start, end, CRGB::Black);
 }
 
@@ -86,7 +87,8 @@ void movePixels(int start, int end, int size)
   int i, c;
   for (i = actualStart, c = 0; i != end + dir; i += dir, c++)
   {
-    if (isButtonPressed()) {
+    if (isButtonPressed())
+    {
       return;
     }
     clearLine(start, end);
@@ -104,33 +106,37 @@ void movePixels(int start, int end, int size)
   FastLED.show();
 }
 
-void moveForwardAndBack(int start, int end, int size) {
+void moveForwardAndBack(int start, int end, int size)
+{
   movePixels(start, end, size);
-  if (isButtonPressed()) return;
+  if (isButtonPressed())
+    return;
   movePixels(end, start, size);
-  if (isButtonPressed()) return;
+  if (isButtonPressed())
+    return;
 }
 
-void calculateRow(int row) {
-  int previousRowStart = (row-1)*LEDS_PER_ROW;
-  int currentRowStart = row*LEDS_PER_ROW;
-
-  Serial.print("prevStart=");
-  Serial.print(previousRowStart);
-  Serial.print("currStart=");
-  Serial.println(currentRowStart);
+void calculateRow(int row)
+{
+  int previousRowStart = (row - 1) * LEDS_PER_ROW;
+  int currentRowStart = row * LEDS_PER_ROW;
 
   CRGB ledRow[LEDS_PER_ROW];
   blockSize = 0;
-  for (int i = 0; i <= LEDS_PER_ROW - 1; i++) {
-    if (leds[previousRowStart + i] != CRGB(0, 0, 0) && leds[currentRowStart + i] != CRGB(0, 0, 0)) {
+  for (int i = 0; i <= LEDS_PER_ROW - 1; i++)
+  {
+    if (leds[previousRowStart + i] != CRGB(0, 0, 0) && leds[currentRowStart + i] != CRGB(0, 0, 0))
+    {
       ledRow[i] = CRGB::Aqua;
       blockSize++;
-    } else {
+    }
+    else
+    {
       ledRow[i] = CRGB::Black;
     }
   }
-  if (blockSize < 1 || row == ROW_COUNT) {
+  if (blockSize < 1 || row == ROW_COUNT)
+  {
     return;
   }
   clearLine(currentRowStart, currentRowStart + LEDS_PER_ROW - 1);
@@ -144,7 +150,7 @@ void setup()
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
   // Setup LED strip
-  FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, NUM_LEDS);
+  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
   FastLED.setBrightness(16);
 
   Serial.begin(9600);
@@ -154,7 +160,7 @@ void loop()
 {
   clearLine(0, NUM_LEDS);
   blockSize = INITIAL_SIZE; // Reset block size
-  buttonState = 1; // Set button state to not pressed
+  buttonState = 1;          // Set button state to not pressed
   speed = INITIAL_SPEED;
   delay(200);
   int level = -99;
@@ -162,17 +168,20 @@ void loop()
   int end;
   for (int i = 0; i <= ROW_COUNT;) // Game loop
   {
-    if (getButtonState() == 0) {
+    if (getButtonState() == 0)
+    {
       flash(CRGB::DarkOrange, 4);
       return;
     }
-    
-    if (level != i) {
+
+    if (level != i)
+    {
       level = i;
       start = i * LEDS_PER_ROW;
       end = i * LEDS_PER_ROW + LEDS_PER_ROW - 1;
-      
-      if ((rand() % 100) < 50) {
+
+      if ((rand() % 100) < 50)
+      {
         int temp = start;
         start = end;
         end = temp;
@@ -183,18 +192,24 @@ void loop()
     if (isButtonPressed())
     {
       calculateRow(i);
-      i++; // Next row 
+      i++;             // Next row
       buttonState = 1; // Set button state to not pressed
-      speed -= 10; // increase speed to harden the difficulty
+      speed -= 10;
+      if ((rand() % 100) < 50)
+      {
+        speed += 5;
+      }
       if (blockSize < 1) // Game over?
       {
         flash(CRGB::Red, 4);
         return;
       }
-      if (i == ROW_COUNT) {
+      if (i == ROW_COUNT)
+      {
         flash(CRGB::Green, 4);
         return;
       }
       delay(200);
     }
   }
+}
