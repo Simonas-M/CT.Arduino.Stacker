@@ -23,7 +23,8 @@ void clearTrails()
   }
 }
 
-int getButtonState() {
+int getButtonState()
+{
   return digitalRead(BUTTON_PIN);
 }
 
@@ -54,17 +55,19 @@ void setLedColor(int startIndex, CRGB *colorArray, int arraySize)
 
 void clearLEDColumn(unsigned int column)
 {
-  for (unsigned int j = 0; j < ROW_COUNT; j++) {
+  for (unsigned int j = 0; j < ROW_COUNT; j++)
+  {
     setLedColor(j, column, CRGB::Black);
   }
 }
 
-void setLEDColumn(unsigned int column, unsigned int start, unsigned int end, CRGB* colorArray)
+void setLEDColumn(unsigned int column, unsigned int start, unsigned int end, CRGB *colorArray)
 {
   clearLEDColumn(column);
-  for (unsigned int j = start, c = 0; j < end; j++, c++) {
+  for (unsigned int j = start, c = 0; j < end; j++, c++)
+  {
     buttonState = getButtonState();
-    setLedColor((ROW_COUNT-1)-j, column, CRGB::DarkGreen);
+    setLedColor((ROW_COUNT - 1) - j, column, CRGB::DarkGreen);
   }
 }
 
@@ -145,26 +148,32 @@ void calculateRow(int row)
   CRGB ledRow[LEDS_PER_ROW];
   if (row == 0)
   {
-    for (int i = 0; i <= LEDS_PER_ROW - 1; i++) {
+    for (int i = 0; i <= LEDS_PER_ROW - 1; i++)
+    {
       ledRow[i] = leds[i] == CRGB(0, 0, 0) ? CRGB::Black : CRGB::Aqua;
     }
   }
   else
   {
     blockSize = 0;
-    for (int i = 0; i <= LEDS_PER_ROW - 1; i++) {
-      if (leds[previousRowStart + i] != CRGB(0, 0, 0) && leds[currentRowStart + i] != CRGB(0, 0, 0)) {
+    for (int i = 0; i <= LEDS_PER_ROW - 1; i++)
+    {
+      if (leds[previousRowStart + i] != CRGB(0, 0, 0) && leds[currentRowStart + i] != CRGB(0, 0, 0))
+      {
         ledRow[i] = CRGB::Aqua;
         blockSize++;
-      } else {
+      }
+      else
+      {
         ledRow[i] = CRGB::Black;
       }
     }
-    if (blockSize < 1 || row == ROW_COUNT) {
+    if (blockSize < 1 || row == ROW_COUNT)
+    {
       return;
     }
   }
-  
+
   clearLine(currentRowStart, currentRowStart + LEDS_PER_ROW - 1);
   setLedColor(currentRowStart, ledRow, sizeof(ledRow) / sizeof(ledRow[0]));
   FastLED.show();
@@ -172,17 +181,17 @@ void calculateRow(int row)
 
 void addTrailsToMatrix(Trail *trails)
 {
-	for (int i = 0; i < LEDS_PER_ROW; i++)
-	{
-		if (trails[i].trail != NULL && trails[i].position >= 0)
-		{
-			TrailState state = getTrailNextPosition(trails[i]);
-			CRGB *arraySlice = getArraySlice(trails[i].trail, state.cutStart, state.cutEnd);
-			setLEDColumn(i, state.start, state.end, arraySlice);
+  for (int i = 0; i < LEDS_PER_ROW; i++)
+  {
+    if (trails[i].trail != NULL && trails[i].position >= 0)
+    {
+      TrailState state = getTrailNextPosition(trails[i]);
+      CRGB *arraySlice = getArraySlice(trails[i].trail, state.cutStart, state.cutEnd);
+      setLEDColumn(i, state.start, state.end, arraySlice);
 
       free(arraySlice);
-		}
-	}
+    }
+  }
 }
 
 void setup()
@@ -207,48 +216,67 @@ void digitalRain()
 
 void gameLoop()
 {
-  while(true)
+  while (true)
   {
     clearLine(0, NUM_LEDS);
     blockSize = INITIAL_SIZE; // Reset block size
-    buttonState = 1; // Set button state to not pressed
+    buttonState = 1;          // Set button state to not pressed
     speed = INITIAL_SPEED;
     delay(200);
+    int level = -99;
+    int start;
+    int end;
     for (int i = 0; i <= ROW_COUNT;) // Game loop
     {
-      if (getButtonState() == 0) {
+      if (getButtonState() == 0)
+      {
         flash(CRGB::DarkOrange, 4);
         return;
       }
-      moveForwardAndBack(i * LEDS_PER_ROW,
-                        i * LEDS_PER_ROW + LEDS_PER_ROW - 1,
-                        blockSize);
+
+      if (level != i)
+      {
+        level = i;
+        start = i * LEDS_PER_ROW;
+        end = i * LEDS_PER_ROW + LEDS_PER_ROW - 1;
+
+        if ((rand() % 100) < 50)
+        {
+          int temp = start;
+          start = end;
+          end = temp;
+        }
+      }
+      moveForwardAndBack(start, end, blockSize);
       if (isButtonPressed())
       {
         screensaverCounter = 0;
         calculateRow(i);
-        i++; // Next row 
-        buttonState = 1; // Set button state to not pressed
-        speed -= 10; // increase speed to harden the difficulty
-        if (blockSize < 1) // Game over?
+        i++;                             // Next row
+        buttonState = 1;                 // Set button state to not pressed
+        speed -= getRandomNumber(7, 18); // increase speed to harden the difficulty
+        if (blockSize < 1)               // Game over?
         {
           flash(CRGB::Red, 4);
           return;
         }
-        if (i == ROW_COUNT) {
+        if (i == ROW_COUNT)
+        {
           flash(CRGB::Green, 4);
           return;
         }
         delay(200);
       }
-      if (screensaverCounter++ > 10) return;
+      if (screensaverCounter++ > 10)
+        return;
     }
   }
 }
 
 void loop()
 {
-  if (isButtonPressed()) {
+  if (isButtonPressed())
+  {
     screensaverCounter = 0;
   }
   if (screensaverCounter > 10)

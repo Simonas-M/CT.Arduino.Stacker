@@ -18,7 +18,7 @@ struct Trail
 
 int getRandomNumber(int min, int max)
 {
-    return rand() % (max - min + 1) + min;
+	return rand() % (max - min + 1) + min;
 }
 
 void advanceTrails(Trail *trails)
@@ -27,7 +27,7 @@ void advanceTrails(Trail *trails)
 	{
 		if (trails[i].trail != NULL)
 		{
-            int trailSize = trails[i].trailLength;
+			int trailSize = trails[i].trailLength;
 			if (trails[i].position > trailSize + ROW_COUNT - 1)
 			{
 				free(trails[i].trail);
@@ -41,7 +41,7 @@ void advanceTrails(Trail *trails)
 
 CRGB *createTrailLine(unsigned int trailLength)
 {
-	CRGB *trail = (CRGB*)malloc(trailLength * sizeof(CRGB));
+	CRGB *trail = (CRGB *)malloc(trailLength * sizeof(CRGB));
 	for (int i = trailLength - 1; i >= 0; i--)
 	{
 		trail[i] = CRGB::Aqua;
@@ -68,7 +68,8 @@ void maybeAddNewTrail(Trail trails[])
 	}
 }
 
-TrailState getTrailNextPosition(Trail trail) {
+TrailState getTrailNextPosition(Trail trail)
+{
 	int length = trail.trailLength + 1;
 	int position = trail.position;
 
@@ -76,18 +77,18 @@ TrailState getTrailNextPosition(Trail trail) {
 	state.start = length > position ? 0 : position - length + 1;
 	state.end = position < ROW_COUNT ? position : ROW_COUNT;
 	state.cutStart = position >= length ? 0 : (length - position - 1);
-	state.cutEnd = position < ROW_COUNT ? length : length - (position - ROW_COUNT) -1;
+	state.cutEnd = position < ROW_COUNT ? length : length - (position - ROW_COUNT) - 1;
 
 	return state;
 }
 
-CRGB* getArraySlice(CRGB *array, int from, int to)
+CRGB *getArraySlice(CRGB *array, int from, int to)
 {
-    const int size = to - from;
-	CRGB *newArray = (CRGB*)malloc(size * sizeof(CRGB));
-    for (int i = from; i > to; i++)
-    {
-        newArray[i] = array[i];
-    }
-    return newArray;
+	const int size = to - from;
+	CRGB *newArray = (CRGB *)malloc(size * sizeof(CRGB));
+	for (int i = from; i > to; i++)
+	{
+		newArray[i] = array[i];
+	}
+	return newArray;
 }
