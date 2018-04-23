@@ -27,7 +27,8 @@ int getButtonState() {
   return digitalRead(BUTTON_PIN);
 }
 
-bool isButtonPressed() {
+bool isButtonPressed()
+{
   return buttonState == 0;
 }
 
@@ -43,9 +44,10 @@ void setLedColor(unsigned int ledIndex, CRGB color)
   leds[ledIndex] = color;
 }
 
-void setLedColor(int startIndex, CRGB* colorArray, int arraySize)
+void setLedColor(int startIndex, CRGB *colorArray, int arraySize)
 {
-  for(int i = 0; i <= arraySize; i++) {
+  for (int i = 0; i < arraySize; i++)
+  {
     leds[startIndex + i] = colorArray[i];
   }
 }
@@ -76,9 +78,11 @@ void drawLine(int start, int end, CRGB color)
   }
 }
 
-void flash(CRGB color, int times) {
-  FastLED.setBrightness(32);
-  for (int i = 0; i <= times; i++) {
+void flash(CRGB color, int times)
+{
+  FastLED.setBrightness(64);
+  for (int i = 0; i <= times; i++)
+  {
     drawLine(0, NUM_LEDS, color);
     FastLED.show();
     delay(100);
@@ -89,7 +93,8 @@ void flash(CRGB color, int times) {
   FastLED.setBrightness(16);
 }
 
-void clearLine(int start, int end) {
+void clearLine(int start, int end)
+{
   drawLine(start, end, CRGB::Black);
 }
 
@@ -103,7 +108,8 @@ void movePixels(int start, int end, int size)
   int i, c;
   for (i = actualStart, c = 0; i != end + dir; i += dir, c++)
   {
-    if (isButtonPressed()) {
+    if (isButtonPressed())
+    {
       return;
     }
     clearLine(start, end);
@@ -121,16 +127,20 @@ void movePixels(int start, int end, int size)
   FastLED.show();
 }
 
-void moveForwardAndBack(int start, int end, int size) {
+void moveForwardAndBack(int start, int end, int size)
+{
   movePixels(start, end, size);
-  if (isButtonPressed()) return;
+  if (isButtonPressed())
+    return;
   movePixels(end, start, size);
-  if (isButtonPressed()) return;
+  if (isButtonPressed())
+    return;
 }
 
-void calculateRow(int row) {
-  int previousRowStart = (row-1)*LEDS_PER_ROW;
-  int currentRowStart = row*LEDS_PER_ROW;
+void calculateRow(int row)
+{
+  int previousRowStart = (row - 1) * LEDS_PER_ROW;
+  int currentRowStart = row * LEDS_PER_ROW;
 
   CRGB ledRow[LEDS_PER_ROW];
   if (row == 0)
