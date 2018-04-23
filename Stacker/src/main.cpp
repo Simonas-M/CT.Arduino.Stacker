@@ -9,17 +9,17 @@ int buttonState = HIGH;
 int buttonPresses = 0;
 int blockSize = INITIAL_SIZE;
 int speed = INITIAL_SPEED;
+unsigned int screensaverCounter = 0;
 
 // DigitalRain Initialization
 Trail trails[LEDS_PER_ROW];
 
 void clearTrails()
 {
-  Trail noTrail = { .position = NULL, .trail = NULL };
-
   for (int i = 0; i < LEDS_PER_ROW; i++)
   {
-    trails[i] = noTrail;
+    trails[i].trail = NULL;
+    trails[i].position = 0;
   }
 }
 
@@ -45,17 +45,24 @@ void setLedColor(unsigned int ledIndex, CRGB color)
 
 void setLedColor(int startIndex, CRGB* colorArray, int arraySize)
 {
-  Serial.print("startIndex=");
-  Serial.println(startIndex);
   for(int i = 0; i <= arraySize; i++) {
     leds[startIndex + i] = colorArray[i];
   }
 }
 
+void clearLEDColumn(unsigned int column)
+{
+  for (unsigned int j = 0; j < ROW_COUNT; j++) {
+    setLedColor(j, column, CRGB::Black);
+  }
+}
+
 void setLEDColumn(unsigned int column, unsigned int start, unsigned int end, CRGB* colorArray)
 {
-  for (int j = start, c = 0; j < end; j++, c++) {
-    setLedColor(j, column, colorArray[c]);
+  clearLEDColumn(column);
+  for (unsigned int j = start, c = 0; j < end; j++, c++) {
+    buttonState = getButtonState();
+    setLedColor((ROW_COUNT-1)-j, column, CRGB::DarkGreen);
   }
 }
 
@@ -70,7 +77,7 @@ void drawLine(int start, int end, CRGB color)
 }
 
 void flash(CRGB color, int times) {
-  FastLED.setBrightness(4);
+  FastLED.setBrightness(32);
   for (int i = 0; i <= times; i++) {
     drawLine(0, NUM_LEDS, color);
     FastLED.show();
@@ -125,39 +132,45 @@ void calculateRow(int row) {
   int previousRowStart = (row-1)*LEDS_PER_ROW;
   int currentRowStart = row*LEDS_PER_ROW;
 
-  Serial.print("prevStart=");
-  Serial.print(previousRowStart);
-  Serial.print("currStart=");
-  Serial.println(currentRowStart);
-
   CRGB ledRow[LEDS_PER_ROW];
-  blockSize = 0;
-  for (int i = 0; i <= LEDS_PER_ROW - 1; i++) {
-    if (leds[previousRowStart + i] != CRGB(0, 0, 0) && leds[currentRowStart + i] != CRGB(0, 0, 0)) {
-      ledRow[i] = CRGB::Aqua;
-      blockSize++;
-    } else {
-      ledRow[i] = CRGB::Black;
+  if (row == 0)
+  {
+    for (int i = 0; i <= LEDS_PER_ROW - 1; i++) {
+      ledRow[i] = leds[i] == CRGB(0, 0, 0) ? CRGB::Black : CRGB::Aqua;
     }
   }
-  if (blockSize < 1 || row == ROW_COUNT) {
-    return;
+  else
+  {
+    blockSize = 0;
+    for (int i = 0; i <= LEDS_PER_ROW - 1; i++) {
+      if (leds[previousRowStart + i] != CRGB(0, 0, 0) && leds[currentRowStart + i] != CRGB(0, 0, 0)) {
+        ledRow[i] = CRGB::Aqua;
+        blockSize++;
+      } else {
+        ledRow[i] = CRGB::Black;
+      }
+    }
+    if (blockSize < 1 || row == ROW_COUNT) {
+      return;
+    }
   }
+  
   clearLine(currentRowStart, currentRowStart + LEDS_PER_ROW - 1);
   setLedColor(currentRowStart, ledRow, sizeof(ledRow) / sizeof(ledRow[0]));
   FastLED.show();
 }
 
-void addTrailsToMatrix(Trail trails[])
+void addTrailsToMatrix(Trail *trails)
 {
-  Serial.println("add trails");
-	for (int i = 0; i > LEDS_PER_ROW; i++)
+	for (int i = 0; i < LEDS_PER_ROW; i++)
 	{
-		if (trails[i].trail != NULL && trails[i].position > 0)
+		if (trails[i].trail != NULL && trails[i].position >= 0)
 		{
 			TrailState state = getTrailNextPosition(trails[i]);
 			CRGB *arraySlice = getArraySlice(trails[i].trail, state.cutStart, state.cutEnd);
 			setLEDColumn(i, state.start, state.end, arraySlice);
+
+      free(arraySlice);
 		}
 	}
 }
@@ -169,51 +182,73 @@ void setup()
 
   // Setup LED strip
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
-  FastLED.setBrightness(16);
 
   clearTrails();
+}
 
-  Serial.begin(9600);
+void digitalRain()
+{
+  advanceTrails(trails);
+  addTrailsToMatrix(trails);
+  maybeAddNewTrail(trails);
+  FastLED.show();
+  delay(50);
+}
+
+void gameLoop()
+{
+  while(true)
+  {
+    clearLine(0, NUM_LEDS);
+    blockSize = INITIAL_SIZE; // Reset block size
+    buttonState = 1; // Set button state to not pressed
+    speed = INITIAL_SPEED;
+    delay(200);
+    for (int i = 0; i <= ROW_COUNT;) // Game loop
+    {
+      if (getButtonState() == 0) {
+        flash(CRGB::DarkOrange, 4);
+        return;
+      }
+      moveForwardAndBack(i * LEDS_PER_ROW,
+                        i * LEDS_PER_ROW + LEDS_PER_ROW - 1,
+                        blockSize);
+      if (isButtonPressed())
+      {
+        screensaverCounter = 0;
+        calculateRow(i);
+        i++; // Next row 
+        buttonState = 1; // Set button state to not pressed
+        speed -= 10; // increase speed to harden the difficulty
+        if (blockSize < 1) // Game over?
+        {
+          flash(CRGB::Red, 4);
+          return;
+        }
+        if (i == ROW_COUNT) {
+          flash(CRGB::Green, 4);
+          return;
+        }
+        delay(200);
+      }
+      if (screensaverCounter++ > 10) return;
+    }
+  }
 }
 
 void loop()
 {
-  // clearLine(0, NUM_LEDS);
-  // blockSize = INITIAL_SIZE; // Reset block size
-  // buttonState = 1; // Set button state to not pressed
-  // speed = INITIAL_SPEED;
-  // delay(200);
-  // for (int i = 0; i <= ROW_COUNT;) // Game loop
-  // {
-  //   if (getButtonState() == 0) {
-  //     flash(CRGB::DarkOrange, 4);
-  //     return;
-  //   }
-  //   moveForwardAndBack(i * LEDS_PER_ROW,
-  //                      i * LEDS_PER_ROW + LEDS_PER_ROW - 1,
-  //                      blockSize);
-  //   if (isButtonPressed())
-  //   {
-  //     calculateRow(i);
-  //     i++; // Next row 
-  //     buttonState = 1; // Set button state to not pressed
-  //     speed -= 10; // increase speed to harden the difficulty
-  //     if (blockSize < 1) // Game over?
-  //     {
-  //       flash(CRGB::Red, 4);
-  //       return;
-  //     }
-  //     if (i == ROW_COUNT) {
-  //       flash(CRGB::Green, 4);
-  //       return;
-  //     }
-  //     delay(200);
-  //   }
-  // }
-  // drawLine(0, NUM_LEDS, CRGB::Blue);
-  advanceTrails(trails);
-  maybeAddNewTrail(trails);
-  addTrailsToMatrix(trails);
-  FastLED.show();
-  delay(1000);
+  if (isButtonPressed()) {
+    screensaverCounter = 0;
+  }
+  if (screensaverCounter > 10)
+  {
+    FastLED.setBrightness(32);
+    digitalRain();
+  }
+  else
+  {
+    FastLED.setBrightness(16);
+    gameLoop();
+  }
 }

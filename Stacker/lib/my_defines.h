@@ -10,7 +10,4 @@
 #define INITIAL_SPEED 100
 #define ROW_COUNT (NUM_LEDS / LEDS_PER_ROW)
 
-
-#define arraySize(array) (sizeof(array) / sizeof((array)[0]))
-
 #endif // MY_DEFINES_H

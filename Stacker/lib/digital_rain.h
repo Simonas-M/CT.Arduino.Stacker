@@ -13,40 +13,36 @@ struct Trail
 {
 	int position;
 	CRGB *trail;
+	unsigned int trailLength;
 };
 
-int getRandomNumber(int from, int to)
+int getRandomNumber(int min, int max)
 {
-    return rand() % to + from;
+    return rand() % (max - min + 1) + min;
 }
 
-void advanceTrails(Trail trails[])
+void advanceTrails(Trail *trails)
 {
-    Serial.println("advance");
-	for (int i = 0; i < ROW_COUNT; i++)
+	for (int i = 0; i < LEDS_PER_ROW; i++)
 	{
-		if (trails[i].trail == NULL)
+		if (trails[i].trail != NULL)
 		{
-            Serial.println("fount not null trail");
-            int trailSize = arraySize(trails[i].trail);
-            Serial.println(trailSize);
-            
-			if (trails[i].position > (trailSize + ROW_COUNT))
+            int trailSize = trails[i].trailLength;
+			if (trails[i].position > trailSize + ROW_COUNT - 1)
 			{
+				free(trails[i].trail);
 				trails[i].trail = NULL;
 				return;
 			}
 			trails[i].position = trails[i].position + 1;
 		}
 	}
-    Serial.println('advanceEnd');
 }
 
-CRGB *createTrailLine()
+CRGB *createTrailLine(unsigned int trailLength)
 {
-	int randomNumber = getRandomNumber(0, ROW_COUNT);
-	CRGB trail[randomNumber];
-	for (int i = randomNumber - 1; i >= 0; i--)
+	CRGB *trail = (CRGB*)malloc(trailLength * sizeof(CRGB));
+	for (int i = trailLength - 1; i >= 0; i--)
 	{
 		trail[i] = CRGB::Aqua;
 	}
@@ -55,27 +51,25 @@ CRGB *createTrailLine()
 
 Trail createTrail()
 {
+	int trailLength = getRandomNumber(1, ROW_COUNT);
 	Trail trail;
 	trail.position = 0;
-	trail.trail = createTrailLine();
+	trail.trail = createTrailLine(trailLength);
+	trail.trailLength = trailLength;
 	return trail;
 }
 
 void maybeAddNewTrail(Trail trails[])
 {
-    Serial.println("add new");
-	int randomLine = getRandomNumber(0, LEDS_PER_ROW);
+	int randomLine = getRandomNumber(0, LEDS_PER_ROW - 1);
 	if (trails[randomLine].trail == NULL)
 	{
 		trails[randomLine] = createTrail();
-        
-        Serial.println(trails[randomLine].position);
-        Serial.println(trails[randomLine].trail[0]);
 	}
 }
 
 TrailState getTrailNextPosition(Trail trail) {
-	int length = arraySize(trail.trail);
+	int length = trail.trailLength + 1;
 	int position = trail.position;
 
 	TrailState state;
@@ -87,10 +81,10 @@ TrailState getTrailNextPosition(Trail trail) {
 	return state;
 }
 
-CRGB* getArraySlice(CRGB array[], int from, int to)
+CRGB* getArraySlice(CRGB *array, int from, int to)
 {
     const int size = to - from;
-    CRGB newArray[size];
+	CRGB *newArray = (CRGB*)malloc(size * sizeof(CRGB));
     for (int i = from; i > to; i++)
     {
         newArray[i] = array[i];
